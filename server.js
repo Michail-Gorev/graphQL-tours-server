@@ -12,7 +12,7 @@ const SALT_ROUNDS = 10;
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: './tours-agency.db',
-  logging: console.log, // Можно отключить в продакшене
+  logging: console.log,
 });
 
 // Модель Museum
@@ -94,7 +94,7 @@ const Tour = sequelize.define('Tour', {
   },
 });
 
-// Модель Order
+// Модель Order с исправленной обработкой даты
 const Order = sequelize.define('Order', {
   id: {
     type: DataTypes.INTEGER,
@@ -110,8 +110,12 @@ const Order = sequelize.define('Order', {
     defaultValue: false,
   },
   timestamp: {
-    type: DataTypes.STRING,
-    defaultValue: "now",
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+    get() {
+      const rawValue = this.getDataValue('timestamp');
+      return rawValue ? rawValue.toISOString() : null;
+    }
   },
 });
 
@@ -138,53 +142,44 @@ Order.belongsTo(Tour);
 
 // GraphQL схема
 const typeDefs = `
-    type Query {
-    # Туры
+  type Query {
     tours: [Tour!]!
     tour(id: ID!): Tour
     activeTours: [Tour!]!
     toursByCity(city: String!): [Tour!]!
     
-    # Музеи
     museums: [Museum!]!
     museum(id: ID!): Museum
     
-    # Пользователи
     users: [User!]!
     user(id: ID!): User
     currentUser: User
     
-    # Заказы
     orders: [Order!]!
     order(id: ID!): Order
     userOrders(userId: ID!): [Order!]!
   }
   
   type Mutation {
-    # Музеи
     createMuseum(input: MuseumInput!): Museum!
     updateMuseum(id: ID!, input: MuseumInput!): Museum!
     deleteMuseum(id: ID!): Boolean!
     
-    # Туры
     createTour(input: TourInput!): Tour!
     updateTour(id: ID!, input: TourInput!): Tour!
     deleteTour(id: ID!): Boolean!
     toggleTourStatus(id: ID!): Tour!
     
-    # Пользователи
     createUser(input: UserInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
     updateUser(id: ID!, input: UserInput!): User!
     deleteUser(id: ID!): Boolean!
     
-    # Заказы
     createOrder(input: OrderInput!): Order!
     confirmOrder(id: ID!): Order!
     cancelOrder(id: ID!): Order!
   }
   
-  # Типы данных
   type Museum {
     id: ID!
     name: String!
@@ -224,7 +219,6 @@ const typeDefs = `
     user: User!
   }
   
-  # Input типы
   input MuseumInput {
     name: String!
     city: String!
@@ -318,17 +312,23 @@ const resolvers = {
     },
   },
 
-  Tour: {
-    museums: async (tour) => {
-      if (tour.museums) return tour.museums;
-      const t = await Tour.findByPk(tour.id, {
+  Order: {
+    timestamp: (order) => {
+      return order.timestamp ? new Date(order.timestamp).toISOString() : new Date().toISOString();
+    },
+    tour: async (order) => {
+      if (order.tour) return order.tour;
+      return await Tour.findByPk(order.tourId, {
         include: [{
           model: Museum,
           as: 'museums',
           through: { attributes: [] }
         }]
       });
-      return t ? t.museums : [];
+    },
+    user: async (order) => {
+      if (order.user) return order.user;
+      return await User.findByPk(order.userId);
     }
   },
 
@@ -512,9 +512,7 @@ const server = new ApolloServer({
 // Запуск сервера
 async function startServer() {
   try {
-    // Синхронизация моделей с базой данных без очистки существующих данных
     await sequelize.sync();
-    
     const { url } = await server.listen();
     console.log(`Server ready at ${url}`);
   } catch (error) {

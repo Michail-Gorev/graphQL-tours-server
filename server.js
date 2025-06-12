@@ -110,8 +110,8 @@ const Order = sequelize.define('Order', {
     defaultValue: false,
   },
   timestamp: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
+    type: DataTypes.STRING,
+    defaultValue: "now",
   },
 });
 

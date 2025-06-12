@@ -509,52 +509,11 @@ const server = new ApolloServer({
   introspection: true,
 });
 
-// Запуск сервера с тестовыми данными
+// Запуск сервера
 async function startServer() {
   try {
-    await sequelize.sync({ force: true });
-    
-    // Тестовые данные
-    const [hermitage, tretyakovka] = await Museum.bulkCreate([
-      { name: 'Эрмитаж', city: 'Санкт-Петербург' },
-      { name: 'Третьяковская галерея', city: 'Москва' }
-    ]);
-    
-    const [moscowTour, spbTour] = await Tour.bulkCreate([
-      {
-        title: 'Московский тур',
-        description: 'Экскурсия по Москве',
-        city: 'Москва',
-        price: 1500,
-        transfer: true,
-        isActive: true
-      },
-      {
-        title: 'Петербургский тур',
-        description: 'Экскурсия по СПб',
-        city: 'Санкт-Петербург',
-        price: 2000,
-        transfer: true,
-        isActive: true
-      }
-    ]);
-    
-    await moscowTour.addMuseum(tretyakovka);
-    await spbTour.addMuseum(hermitage);
-    
-    const adminUser = await User.create({
-      firstName: 'Admin',
-      lastName: 'Adminov',
-      email: 'admin@example.com',
-      passwordHash: await bcrypt.hash('admin123', SALT_ROUNDS)
-    });
-    
-    await Order.create({
-      tourId: moscowTour.id,
-      userId: adminUser.id,
-      cost: moscowTour.price,
-      isConfirmed: true
-    });
+    // Синхронизация моделей с базой данных без очистки существующих данных
+    await sequelize.sync();
     
     const { url } = await server.listen();
     console.log(`Server ready at ${url}`);

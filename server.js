@@ -202,7 +202,7 @@ const typeDefs = `
     firstName: String!
     lastName: String!
     email: String!
-    orders: [Order!]!
+    orders: [Order]
   }
   
   type Order {

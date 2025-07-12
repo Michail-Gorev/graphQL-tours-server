@@ -408,7 +408,7 @@ const resolvers = {
       if (!user) throw new Error('Invalid credentials (email)');
       
       const valid = await bcrypt.compare(password, user.passwordHash);
-      if (!valid) throw new Error(`Invalid credentials (password). Correct is: ${passHash}`);
+      if (!valid) throw new Error(`Invalid credentials (password). Correct is: ${passHash}. Valid: ${valid}`);
       
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
       

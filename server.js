@@ -404,10 +404,10 @@ const resolvers = {
     login: async (_, { input }) => {
       const { email, password } = input;
       const user = await User.findOne({ where: { email } });
-      const passHash = user.passwordHash
-      if (!user) throw new Error('Invalid credentials (email)');
       
+      if (!user) throw new Error('Invalid credentials (email)');
       const valid = await bcrypt.compare(password, user.passwordHash);
+      
       if (!valid) throw new Error(`Invalid credentials (password). Correct is: ${passHash}. Valid: ${valid}`);
       
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
